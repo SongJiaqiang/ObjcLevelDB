@@ -339,3 +339,28 @@ NSData   * NSDataFromLevelDBKey  (LevelDBKey * key);
                               usingBlock:(id)block;
 
 @end
+
+@interface LevelDB (Internal)
+
+- (void) enumerateKeysBackward:(BOOL)backward
+                 startingAtKey:(id)key
+           filteredByPredicate:(NSPredicate *)predicate
+                     andPrefix:(id)prefix
+                  withSnapshot:(LDBSnapshot *)snapshot
+                    usingBlock:(LevelDBKeyBlock)block
+                       decoder:(LevelDBDecoderBlock)decoder;
+
+- (void) enumerateKeysAndObjectsBackward:(BOOL)backward
+                                  lazily:(BOOL)lazily
+                           startingAtKey:(id)key
+                     filteredByPredicate:(NSPredicate *)predicate
+                               andPrefix:(id)prefix
+                            withSnapshot:(LDBSnapshot *)snapshot
+                              usingBlock:(id)block
+                                 decoder:(LevelDBDecoderBlock)decoder;
+
+- (void) setObject:(id)value forKey:(id)key encoder:(LevelDBEncoderBlock)encoder;
+
+- (id) objectForKey:(id)key withSnapshot:(LDBSnapshot *)snapshot decoder:(LevelDBDecoderBlock)decoder;
+
+@end

@@ -1,7 +1,7 @@
 //
 //  LevelDB.m
 //
-//  Copyright 2011 Pave Labs. All rights reserved. 
+//  Copyright 2011 Pave Labs. All rights reserved.
 //  See LICENCE for details.
 //
 
@@ -18,28 +18,28 @@
 #include "Common.h"
 
 #define MaybeAddSnapshotToOptions(_from_, _to_, _snap_) \
-    leveldb::ReadOptions __to_;\
-    leveldb::ReadOptions * _to_ = &__to_;\
-    if (_snap_ != nil) { \
-        _to_->fill_cache = _from_.fill_cache; \
-        _to_->snapshot = [_snap_ getSnapshot]; \
-    } else \
-        _to_ = &_from_;
+leveldb::ReadOptions __to_;\
+leveldb::ReadOptions * _to_ = &__to_;\
+if (_snap_ != nil) { \
+_to_->fill_cache = _from_.fill_cache; \
+_to_->snapshot = [_snap_ getSnapshot]; \
+} else \
+_to_ = &_from_;
 
 #define SeekToFirstOrKey(iter, key, _backward_) \
-    (key != nil) ? iter->Seek(KeyFromStringOrData(key)) : \
-    _backward_ ? iter->SeekToLast() : iter->SeekToFirst()
+(key != nil) ? iter->Seek(KeyFromStringOrData(key)) : \
+_backward_ ? iter->SeekToLast() : iter->SeekToFirst()
 
 #define MoveCursor(_iter_, _backward_) \
-    _backward_ ? iter->Prev() : iter->Next()
+_backward_ ? iter->Prev() : iter->Next()
 
 #define EnsureNSData(_obj_) \
-    ([_obj_ isKindOfClass:[NSData class]]) ? _obj_ : \
-    ([_obj_ isKindOfClass:[NSString class]]) ? [NSData dataWithBytes:[_obj_ cStringUsingEncoding:NSUTF8StringEncoding] \
-                                                              length:[_obj_ lengthOfBytesUsingEncoding:NSUTF8StringEncoding]] : nil
+([_obj_ isKindOfClass:[NSData class]]) ? _obj_ : \
+([_obj_ isKindOfClass:[NSString class]]) ? [NSData dataWithBytes:[_obj_ cStringUsingEncoding:NSUTF8StringEncoding] \
+length:[_obj_ lengthOfBytesUsingEncoding:NSUTF8StringEncoding]] : nil
 
 #define AssertDBExists(_db_) \
-    NSAssert(_db_ != NULL, @"Database reference is not existent (it has probably been closed)");
+NSAssert(_db_ != NULL, @"Database reference is not existent (it has probably been closed)");
 
 namespace {
     class BatchIterator : public leveldb::WriteBatch::Handler {
@@ -58,8 +58,8 @@ namespace {
 
 NSString * NSStringFromLevelDBKey(LevelDBKey * key) {
     return [[[NSString alloc] initWithBytes:key->data
-                                    length:key->length
-                                  encoding:NSUTF8StringEncoding] autorelease];
+                                     length:key->length
+                                   encoding:NSUTF8StringEncoding] autorelease];
 }
 NSData   * NSDataFromLevelDBKey(LevelDBKey * key) {
     return [NSData dataWithBytes:key->data length:key->length];
@@ -207,16 +207,14 @@ LevelDBOptions MakeLevelDBOptions() {
 }
 
 #pragma mark - Setters
-
-- (void) setObject:(id)value forKey:(id)key {
+- (void) setObject:(id)value forKey:(id)key encoder:(LevelDBEncoderBlock)encoder {
     AssertDBExists(db);
     AssertKeyType(key);
     NSParameterAssert(value != nil);
     
     leveldb::Slice k = KeyFromStringOrData(key);
     LevelDBKey lkey = GenericKeyFromSlice(k);
-
-    NSData *data = _encoder(&lkey, value);
+    NSData *data = encoder(&lkey, value);
     leveldb::Slice v = SliceFromData(data);
     
     leveldb::Status status = db->Put(writeOptions, k, v);
@@ -224,6 +222,10 @@ LevelDBOptions MakeLevelDBOptions() {
     if(!status.ok()) {
         NSLog(@"Problem storing key/value pair in database: %s", status.ToString().c_str());
     }
+}
+
+- (void) setObject:(id)value forKey:(id)key {
+    [self setObject:value forKey:key encoder:self.encoder];
 }
 - (void) setValue:(id)value forKey:(NSString *)key {
     [self setObject:value forKey:key];
@@ -264,7 +266,10 @@ LevelDBOptions MakeLevelDBOptions() {
 }
 - (id) objectForKey:(id)key
        withSnapshot:(LDBSnapshot *)snapshot {
-    
+    return [self objectForKey:key withSnapshot:nil decoder:self.decoder];
+}
+
+- (id) objectForKey:(id)key withSnapshot:(LDBSnapshot *)snapshot decoder:(LevelDBDecoderBlock)decoder {
     AssertDBExists(db);
     AssertKeyType(key);
     std::string v_string;
@@ -279,8 +284,10 @@ LevelDBOptions MakeLevelDBOptions() {
     }
     
     LevelDBKey lkey = GenericKeyFromSlice(k);
-    return DecodeFromSlice(v_string, &lkey, _decoder);
+    return DecodeFromSlice(v_string, &lkey, decoder);
 }
+
+
 - (id) objectsForKeys:(NSArray *)keys notFoundMarker:(id)marker {
     NSMutableArray *result = [NSMutableArray arrayWithCapacity:keys.count];
     [keys enumerateObjectsUsingBlock:^(id objId, NSUInteger idx, BOOL *stop) {
@@ -360,7 +367,7 @@ LevelDBOptions MakeLevelDBOptions() {
         prefixPtr = [(NSData *)prefix bytes];
         prefixLen = (size_t)[(NSData *)prefix length];
     }
-
+    
     for (SeekToFirstOrKey(iter, (id)prefix, NO)
          ; iter->Valid()
          ; MoveCursor(iter, NO)) {
@@ -518,6 +525,23 @@ LevelDBOptions MakeLevelDBOptions() {
                   withSnapshot:(LDBSnapshot *)snapshot
                     usingBlock:(LevelDBKeyBlock)block {
     
+    [self enumerateKeysBackward:backward
+                  startingAtKey:key
+            filteredByPredicate:predicate
+                      andPrefix:prefix
+                   withSnapshot:nil
+                     usingBlock:block
+                        decoder:self.decoder];
+}
+
+- (void) enumerateKeysBackward:(BOOL)backward
+                 startingAtKey:(id)key
+           filteredByPredicate:(NSPredicate *)predicate
+                     andPrefix:(id)prefix
+                  withSnapshot:(LDBSnapshot *)snapshot
+                    usingBlock:(LevelDBKeyBlock)block
+                       decoder:(LevelDBDecoderBlock)decoder  {
+    
     AssertDBExists(db);
     MaybeAddSnapshotToOptions(readOptions, readOptionsPtr, snapshot);
     leveldb::Iterator* iter = db->NewIterator(*readOptionsPtr);
@@ -527,13 +551,13 @@ LevelDBOptions MakeLevelDBOptions() {
     NSData *prefixData = EnsureNSData(prefix);
     
     LevelDBKeyValueBlock iterate = (predicate != nil)
-        ? ^(LevelDBKey *lk, id value, BOOL *stop) {
-            if ([predicate evaluateWithObject:value])
-                block(lk, stop);
-          }
-        : ^(LevelDBKey *lk, id value, BOOL *stop) {
+    ? ^(LevelDBKey *lk, id value, BOOL *stop) {
+        if ([predicate evaluateWithObject:value])
             block(lk, stop);
-          };
+    }
+    : ^(LevelDBKey *lk, id value, BOOL *stop) {
+        block(lk, stop);
+    };
     
     for ([self _startIterator:iter backward:backward prefix:prefix start:key]
          ; iter->Valid()
@@ -544,7 +568,7 @@ LevelDBOptions MakeLevelDBOptions() {
             break;
         
         LevelDBKey lk = GenericKeyFromSlice(lkey);
-        id v = (predicate == nil) ? nil : DecodeFromSlice(iter->value(), &lk, _decoder);
+        id v = (predicate == nil) ? nil : DecodeFromSlice(iter->value(), &lk, decoder);
         iterate(&lk, v, &stop);
         if (stop) break;
     }
@@ -584,7 +608,25 @@ LevelDBOptions MakeLevelDBOptions() {
                      filteredByPredicate:(NSPredicate *)predicate
                                andPrefix:(id)prefix
                             withSnapshot:(LDBSnapshot *)snapshot
-                              usingBlock:(id)block{
+                              usingBlock:(id)block {
+    [self enumerateKeysAndObjectsBackward:backward
+                                   lazily:lazily
+                            startingAtKey:key
+                      filteredByPredicate:predicate
+                                andPrefix:prefix
+                             withSnapshot:nil
+                               usingBlock:block
+                                  decoder:self.decoder];
+}
+
+- (void) enumerateKeysAndObjectsBackward:(BOOL)backward
+                                  lazily:(BOOL)lazily
+                           startingAtKey:(id)key
+                     filteredByPredicate:(NSPredicate *)predicate
+                               andPrefix:(id)prefix
+                            withSnapshot:(LDBSnapshot *)snapshot
+                              usingBlock:(id)block
+                                 decoder:(LevelDBDecoderBlock)decoder {
     
     AssertDBExists(db);
     MaybeAddSnapshotToOptions(readOptions, readOptionsPtr, snapshot);
@@ -594,27 +636,27 @@ LevelDBOptions MakeLevelDBOptions() {
     
     LevelDBLazyKeyValueBlock iterate = (predicate != nil)
     
-        // If there is a predicate:
-        ? ^ (LevelDBKey *lk, LevelDBValueGetterBlock valueGetter, BOOL *stop) {
-            // We need to get the value, whether the `lazily` flag was set or not
-            id value = valueGetter();
-            
-            // If the predicate yields positive, we call the block
-            if ([predicate evaluateWithObject:value]) {
-                if (lazily)
-                    ((LevelDBLazyKeyValueBlock)block)(lk, valueGetter, stop);
-                else
-                    ((LevelDBKeyValueBlock)block)(lk, value, stop);
-            }
-        }
-    
-        // Otherwise, we call the block
-        : ^ (LevelDBKey *lk, LevelDBValueGetterBlock valueGetter, BOOL *stop) {
+    // If there is a predicate:
+    ? ^ (LevelDBKey *lk, LevelDBValueGetterBlock valueGetter, BOOL *stop) {
+        // We need to get the value, whether the `lazily` flag was set or not
+        id value = valueGetter();
+        
+        // If the predicate yields positive, we call the block
+        if ([predicate evaluateWithObject:value]) {
             if (lazily)
                 ((LevelDBLazyKeyValueBlock)block)(lk, valueGetter, stop);
             else
-                ((LevelDBKeyValueBlock)block)(lk, valueGetter(), stop);
-        };
+                ((LevelDBKeyValueBlock)block)(lk, value, stop);
+        }
+    }
+    
+    // Otherwise, we call the block
+    : ^ (LevelDBKey *lk, LevelDBValueGetterBlock valueGetter, BOOL *stop) {
+        if (lazily)
+            ((LevelDBLazyKeyValueBlock)block)(lk, valueGetter, stop);
+        else
+            ((LevelDBKeyValueBlock)block)(lk, valueGetter(), stop);
+    };
     
     NSData *prefixData = EnsureNSData(prefix);
     
@@ -633,7 +675,7 @@ LevelDBOptions MakeLevelDBOptions() {
         
         getter = ^ id {
             if (v) return v;
-            v = DecodeFromSlice(iter->value(), &lk, _decoder);
+            v = DecodeFromSlice(iter->value(), &lk, decoder);
             return v;
         };
         
