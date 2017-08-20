@@ -110,11 +110,11 @@ LevelDBOptions MakeLevelDBOptions() {
 + (LevelDBOptions) makeOptions {
     return MakeLevelDBOptions();
 }
-- (id) initWithPath:(NSString *)path andName:(NSString *)name {
+- (LevelDB *) initWithPath:(NSString *)path andName:(NSString *)name {
     LevelDBOptions opts = MakeLevelDBOptions();
     return [self initWithPath:path name:name andOptions:opts];
 }
-- (id) initWithPath:(NSString *)path name:(NSString *)name andOptions:(LevelDBOptions)opts {
+- (LevelDB *) initWithPath:(NSString *)path name:(NSString *)name andOptions:(LevelDBOptions)opts {
     self = [super init];
     if (self) {
         _name = name;
@@ -182,11 +182,11 @@ LevelDBOptions MakeLevelDBOptions() {
     return self;
 }
 
-+ (id) databaseInLibraryWithName:(NSString *)name {
++ (LevelDB *) databaseInLibraryWithName:(NSString *)name {
     LevelDBOptions opts = MakeLevelDBOptions();
     return [self databaseInLibraryWithName:name andOptions:opts];
 }
-+ (id) databaseInLibraryWithName:(NSString *)name
++ (LevelDB *) databaseInLibraryWithName:(NSString *)name
                       andOptions:(LevelDBOptions)opts {
     NSString *path = [getLibraryPath() stringByAppendingPathComponent:name];
     LevelDB *ldb = [[[self alloc] initWithPath:path name:name andOptions:opts] autorelease];

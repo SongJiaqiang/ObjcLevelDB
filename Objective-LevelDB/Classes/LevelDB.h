@@ -102,7 +102,7 @@ NSData   * NSDataFromLevelDBKey  (LevelDBKey * key);
  
  @param name The database's filename
  */
-+ (id) databaseInLibraryWithName:(NSString *)name;
++ (LevelDB *) databaseInLibraryWithName:(NSString *)name;
 
 /**
  A class method that returns an autoreleased instance of LevelDB with the given name and options, inside the Library folder
@@ -110,7 +110,7 @@ NSData   * NSDataFromLevelDBKey  (LevelDBKey * key);
  @param name The database's filename
  @param opts A LevelDBOptions struct with options for fine tuning leveldb
  */
-+ (id) databaseInLibraryWithName:(NSString *)name andOptions:(LevelDBOptions)opts;
++ (LevelDB *) databaseInLibraryWithName:(NSString *)name andOptions:(LevelDBOptions)opts;
 
 /**
  Initialize a leveldb instance
@@ -118,7 +118,7 @@ NSData   * NSDataFromLevelDBKey  (LevelDBKey * key);
  @param path The parent directory of the database file on disk
  @param name the filename of the database file on disk
  */
-- (id) initWithPath:(NSString *)path andName:(NSString *)name;
+- (LevelDB *) initWithPath:(NSString *)path andName:(NSString *)name;
 
 /**
  Initialize a leveldb instance
