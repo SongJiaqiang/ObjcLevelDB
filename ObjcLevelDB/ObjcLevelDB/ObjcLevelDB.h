@@ -9,6 +9,7 @@
 #import <UIKit/UIKit.h>
 
 #import "LevelDB+FC.h"
+#import "FastCoder.h"
 #import "LevelDB.h"
 #import "Common.h"
 #import "LDBSnapshot.h"

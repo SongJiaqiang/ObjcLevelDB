@@ -25,7 +25,7 @@
 		635AD3F31F49C390002AFE0D /* table_builder.h in Headers */ = {isa = PBXBuildFile; fileRef = 635AD3761F49C390002AFE0D /* table_builder.h */; };
 		635AD3F41F49C390002AFE0D /* write_batch.h in Headers */ = {isa = PBXBuildFile; fileRef = 635AD3771F49C390002AFE0D /* write_batch.h */; };
 		635AD3F51F49C390002AFE0D /* libleveldb.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 635AD3781F49C390002AFE0D /* libleveldb.a */; };
-		635AD4B41F49C3B0002AFE0D /* FastCoder.h in Headers */ = {isa = PBXBuildFile; fileRef = 635AD4581F49C3AF002AFE0D /* FastCoder.h */; };
+		635AD4B41F49C3B0002AFE0D /* FastCoder.h in Headers */ = {isa = PBXBuildFile; fileRef = 635AD4581F49C3AF002AFE0D /* FastCoder.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		635AD4B51F49C3B0002AFE0D /* FastCoder.m in Sources */ = {isa = PBXBuildFile; fileRef = 635AD4591F49C3AF002AFE0D /* FastCoder.m */; };
 		635AD5351F49C3E2002AFE0D /* Common.h in Headers */ = {isa = PBXBuildFile; fileRef = 635AD5041F49C3E1002AFE0D /* Common.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		635AD5361F49C3E2002AFE0D /* LDBSnapshot.h in Headers */ = {isa = PBXBuildFile; fileRef = 635AD5051F49C3E1002AFE0D /* LDBSnapshot.h */; settings = {ATTRIBUTES = (Public, ); }; };
